@@ -974,8 +974,8 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=password
       - MYSQL_DATABASE=test
-      - MYSQL_USER=directdevops
-      - MYSQL_PASSWORD=directdevops
+      - MYSQL_USER=krishna
+      - MYSQL_PASSWORD=krishna
     volumes:
       - type: volume
         source: students-db
