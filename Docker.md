@@ -368,3 +368,248 @@ CMD ["java", "-jar", "spring-petclinic-2.4.2.jar"]
 
 ### Immutable Infrastructure
 * Any infra changes will not be done on infra directly rather we create some infra as code option and change the configuration.
+
+* LABEL: This instruction adds metadata [Refere Here](https://docs.docker.com/engine/reference/builder/#label)
+    ```Dockerfile
+    FROM amazoncorretto:11
+    LABEL author="krishnaprasad"
+    LABEL organization="invenger"
+    LABEL project="learning"
+    RUN curl https://referenceapplicationskhaja.s3.us-west-2.amazonaws.com/spring-petclinic-2.4.2.jar -o spring-petclinic-2.4.2.jar
+    EXPOSE 8080
+* Lets inspect the image docker image inspect spc:1.0.0.1 and observe the labels section
+![Preview](./Images/docker63.png)
+
+### ADD, COPY instructions
+* ADD instruction can add the files into docker image from local file system as well as from http(s)
+* ADD instruction can have sources
+    * local file system
+    * git repo
+    * url
+* COPY supports only local file system
+* Lets use ADD to download springpetclinic into docker image from url ADD https://referenceapplicationskhaja.s3.us-west-2.amazonaws.com/spring-petclinic-2.4.2.jar /spring-petclinic-2.4.2.jar
+![Preview](./Images/docker64.png)
+
+```Dockerfile
+FROM amazoncorretto:11
+LABEL author="krishnaprasad"
+LABEL organization="invenger"
+LABEL project="learning"
+ADD https://referenceapplicationskhaja.s3.us-west-2.amazonaws.com/spring-petclinic-2.4.2.jar  /spring-petclinic-2.4.2.jar
+EXPOSE 8080
+CMD ["java", "-jar", "/spring-petclinic-2.4.2.jar"]
+```
+* copy the springpetclinic jar file into some local path on docker host. 
+
+```Dockerfile
+FROM amazoncorretto:11
+LABEL author="krishnaprasad"
+LABEL organization="invenger"
+LABEL project="learning"
+# Copy from local file on Docker host into docker image
+COPY spring-petclinic-2.4.2.jar  /spring-petclinic-2.4.2.jar
+EXPOSE 8080
+CMD ["java", "-jar", "/spring-petclinic-2.4.2.jar"]
+```
+### What do we mean by running container in detached mode?
+* Lets try to start the docker container jenkins ```jenkins/jenkins```
+![Preview](./Images/docker65.png)
+![Preview](./Images/docker66.png)
+* docker container’s STDOUT and STDERR will be attached to your terminal and if we execute ctrl+c the container exits.
+* Running container normally will take us to attached mode.
+* In detached mode container executes and gives us back the access to terminal
+![Preview](./Images/docker67.png)
+* Once we start the container in detached mode we can still view the STDOUT and STDERR by executing ```docker container attach <container-name-or-id>```
+To exit from attach mode Ctrl+PQ
+
+### Docker container will be in running state as long as command in cmd is running
+* Consider the following Dockerfile
+```Dockerfile
+FROM amazoncorretto:11
+LABEL author="krishnaprasad"
+LABEL organization="invenger"
+LABEL project="learning"
+# Copy from local file on Docker host into docker image
+COPY spring-petclinic-2.4.2.jar  /spring-petclinic-2.4.2.jar
+EXPOSE 8080
+CMD ["sleep", "10s"]
+```
+* We have sleep 10s i.e. this will run for 10s and finish.
+* Docker container will move to exited stated once the command in CMD has finished executing
+![Preview](./Images/docker68.png)
+
+### Setting Environment Variables in the container
+* ENV instruction [Refer Here](https://docs.docker.com/engine/reference/builder/#env)
+* This instruction adds environmental variable in the container and it also allows us to change environmental variables while creating containers.
+* docker container exec will allow us to execute commands in the container
+* ```docker container exec spc printenv``` it will print the environmental variables in the spc container.
+* ```docker container exec -it <c-name> <shell>``` will allow us to login into container
+![Preview](./Images/docker69.png)
+* ARG instruction allows us to set the values while building the image [Refer Here](https://docs.docker.com/engine/reference/builder/#arg)
+```Dockerfile
+FROM mcr.microsoft.com/dotnet/sdk:7.0
+LABEL author="krishna" organization="invenger" project="learning"
+ARG DOWNLOAD_URL=https://github.com/nopSolutions/nopCommerce/releases/download/release-4.60.2/nopCommerce_4.60.2_NoSource_linux_x64.zip
+ARG HOME_DIR=/nop
+ADD ${DOWNLOAD_URL} ${HOME_DIR}/nopCommerce_4.60.2_NoSource_linux_x64.zip
+WORKDIR ${HOME_DIR}
+RUN apt update && apt install unzip -y && \
+    unzip ${HOME_DIR}/nopCommerce_4.60.2_NoSource_linux_x64.zip && \
+    mkdir ${HOME_DIR}/bin && mkdir ${HOME_DIR}/logs
+EXPOSE 5000
+ENV ASPNETCORE_URLS="http://0.0.0.0:5000"
+CMD [ "dotnet", "Nop.Web.dll"]
+```
+* Refer above Dockerfile there i have added Build arguments.
+* Build args can be set while creating images. BUILD ARG can be used by using ```${ARG_NAME}```
+
+
+* USER: [Refer Here](https://docs.docker.com/engine/reference/builder/#user)
+```Dockerfile
+FROM mcr.microsoft.com/dotnet/sdk:7.0
+LABEL author="krishna" organization="invenger" project="learning"
+ARG user=nopcommerce
+ARG group=nopcommerce
+ARG uid=1000
+ARG gid=1000
+ARG DOWNLOAD_URL=https://github.com/nopSolutions/nopCommerce/releases/download/release-4.60.2/nopCommerce_4.60.2_NoSource_linux_x64.zip
+ARG HOME_DIR=/nop
+RUN apt update && apt install unzip -y
+# Create user nopcommerce
+RUN groupadd -g ${gid} ${group} \
+    && useradd -d "$HOME_DIR" -u ${uid} -g ${gid} -m -s /bin/bash ${user}
+USER ${user}
+WORKDIR ${HOME_DIR}
+ADD --chown=${user}:${group} ${DOWNLOAD_URL} ${HOME_DIR}/nopCommerce_4.60.2_NoSource_linux_x64.zip
+RUN unzip ${HOME_DIR}/nopCommerce_4.60.2_NoSource_linux_x64.zip && \
+    mkdir ${HOME_DIR}/bin && mkdir ${HOME_DIR}/logs
+EXPOSE 5000
+ENV ASPNETCORE_URLS="http://0.0.0.0:5000"
+CMD [ "dotnet", "Nop.Web.dll"]
+```
+
+* Refer Here for the changes done to add a non root user to run the nop commerce application.
+![Preview](./Images/docker70.png)
+
+### Image Layers
+* A Read write layer gets added to every container and image will have read layers
+### Layers in Docker Image
+* Lets pull alpine image and inspect the image
+```
+docker image pull alpine
+docker image inspect alpine
+```
+![Preview](./Images/docker71.png)
+
+### Experiment 1
+* Lets create a new image based on alpine exp1
+```
+FROM alpine
+label author=krishna
+CMD ["sleep", "1d"]
+```
+* List images
+![Preview](./Images/docker72.png)
+* inspect layers of alpine and exp1
+![Preview](./Images/docker73.png)
+
+### Experiment 2
+* Lets create a new image based on alpine exp2
+```
+FROM alpine
+label author=krishna
+ADD 1.txt /
+CMD ["sleep", "1d"]
+```
+
+* lets inspect layers of exp2 and alpine
+![Preview](./Images/docker74.png)
+
+### Experiment 3
+* Lets create a new image based on alpine exp3
+```
+FROM alpine
+label author=krishna
+RUN echo "one" > 1.txt
+RUN echo "two" > 2.txt
+RUN echo "three" > 3.txt
+CMD ["sleep", "1d"]
+```
+* Inspect image layers
+![Preview](./Images/docker75.png)
+
+### Experimenet 4
+* Lets create a new image based on alpine exp4
+```
+FROM alpine
+label author=krishna
+RUN echo "one" > 1.txt && \
+    echo "two" > 2.txt && \
+    echo "three" > 3.txt
+CMD ["sleep", "1d"]
+```
+* inspect results
+![Preview](./Images/docker76.png)
+
+### Layers in Docker image
+* Docker image is collection of layers and some metadata
+* Docker image gets first set of layers from base image
+* Any Additional changes w.r.t ADD/COPY creates extra layers
+* Each RUN instruction which needs some storage creates layer
+* It is recommended to use Multiple commands in RUN instruction rather than multiple RUN instructions as this leads to too many layers
+* Docker has a filesystem which is aware of layers
+    * overlay2
+
+### Container and layers
+* When a container gets created all the effective read-only image layers are mounted as disk to the container
+* Docker creates a thin read write layer for each container.
+* Any changes made by container will be stored in this layer
+* Problem: when we delete container read write layer will be deleted.
+
+### Stateful Appplications and Stateless Applications
+* Stateful applications use local storage to store any state
+* Stateless applications use external systems (database, blobstorage etc) to store the state
+* We need not do anything special if your application is stateless in terms of writable layer, but if it stateful we need to preserve the state.
+
+### Solving the Problem with Writable Layers
+* Lets create a mysql container [Refere Here](https://hub.docker.com/_/mysql)
+* Command
+```
+docker container run -d --name mysqldb -e MYSQL_ROOT_PASSWORD=krishna -e MYSQL_DATABASE=employees -e MYSQL_USER=krishna -e MYSQL_PASSWORD=krishna -P mysql:8
+```
+* To login into container
+```
+docker container exec -it mysqldb mysql --password=krishna
+```
+* To create a table
+```
+use employees;
+CREATE TABLE Persons (
+    PersonID int,
+    LastName varchar(255),
+    FirstName varchar(255),
+    Address varchar(255),
+    City varchar(255)
+);
+Insert into Persons Values (1,'test','test', 'test', 'test');
+Select * from Persons;
+```
+![Preview](./Images/docker77.png)
+* Now if we remove the container we loose the data
+* To fix the problem with data losses, Docker has volumes.
+* Volume can exist even after docker container is deleted.
+* We can attach volumes to other containers as well
+* For this volume to work, we need to know the folder of which data will be preserved
+* Let explore docker volume subcommand
+![Preview](./Images/docker78.png)
+* docker volume creates a storage according to the driver specified. The default driver is local i.e. the volume is created in the machine where docker is executing
+
+### Docker volumes 
+[Refer Here](https://docs.docker.com/storage/volumes/#:~:text=Volumes%20are%20the%20preferred%20mechanism,are%20completely%20managed%20by%20Docker.)
+
+### Key Points
+1. Always ensure volumes are automatically created for the stateful applications as part of Dockerfile (VOLUME instruction)
+2. Volumes are of two types
+    1. Explicity created (docker volume create myvol)
+    2. automatically created as part of container creation
+3. Ensure we have knowledge on necessary folders where the data is stored and use volumes for it
