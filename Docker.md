@@ -1080,3 +1080,178 @@ INSERT INTO authors (id,name,email) VALUES(3,"Tom","tom@yahoo.com");
 select * from authors;
 ```
 * Tmpfs mount: This gets mounted to the RAM/memory into container. This is useful only for applications which require preset data to be present in memory
+
+
+### Networking
+
+* Every container is getting an ip address
+* Docker has a subcommand for network
+    ![Preview](./Images/docker109.png)
+* lets see what are the networks available
+    ![Preview](./Images/docker110.png)
+* Two possible Networing options identified
+* Share the same network of docker host to the container
+    ![Preview](./Images/docker111.png)
+* Create a new network on the docker host and make it available to the containers. Connect the network created by docker host to the network docker host is connected by using a bridge
+   ![Preview](./Images/docker112.png) 
+
+
+### Experiment:
+* Create a linux vm and verifie network interfaces. we had two interfaces
+    * loopback (lo) => 127.0.0.1/localhost
+    * eth0
+* We had installe docker on the linux machine and one more interface got created
+    * docker0
+* Now we have create a docker container and verifie the network interfaces we got two interfaces
+    * loopback (lo)
+    * eth0
+* Verify the above experiment by doing the task above mentioned.
+    ![Preview](./Images/docker113.png)
+* Docker has created a standard CNM (Container Networking Model). Core OS has developed one more standard CNI (Container Networking Interface).
+* Refer networking sections 
+    * Networking series-1
+    * Networking series-2
+    * Docker SWARM
+* Docker’s implementation of CNM is libnetwork.
+
+### Experiments
+
+* Now lets create two alpine containers d1 and d2
+   ![Preview](./Images/docker114.png) 
+* bridge is the default network so lets inspect that
+```json
+$ docker network inspect bridge
+[
+    {
+        "Name": "bridge",
+        "Id": "32a9179a702cc3318b95739fe9262f1cb5bf8b3d5a8b969b6cf2f420b295fad6",
+        "Created": "2023-05-16T11:47:55.289002134Z",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.17.0.0/16"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "9973d45710e9df0412ecf464f08e18401ada48ff846eab72fb329a25e6c6dec5": {
+                "Name": "d1",
+                "EndpointID": "881d8e2cbc2c3970210b07b8de24f91f5a1f7862cdf8dc3a6d9f78bbcd6151a3",
+                "MacAddress": "02:42:ac:11:00:02",
+                "IPv4Address": "172.17.0.2/16",
+                "IPv6Address": ""
+            },
+            "f7d505379c1772449e1964a29a882c2b937fac0bafad4d00dccb529ae1e1ba97": {
+                "Name": "d2",
+                "EndpointID": "cc4b43c5a29d531dbbeef0ccaf6be41fb71283560a50be23c7a5a41680c2ab1a",
+                "MacAddress": "02:42:ac:11:00:03",
+                "IPv4Address": "172.17.0.3/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+            "com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
+```
+* d1 has an ip ```172.17.0.2``` and d2 has an ip ```172.17.0.3```
+* Lets run ping from d1 to d2 using name and then ip
+    ![Preview](./Images/docker115.png)
+* In default bridge network we are able to ping containers by its ip address not by their names
+* Now lets try to create our bridge network ```my_bridge```
+    ![Preview](./Images/docker116.png)
+* Now lets create two containers m1 and m2
+    ![Preview](./Images/docker117.png)
+```json
+[
+    {
+        "Name": "my_bridge",
+        "Id": "f1bf06a8a8bac08f58ead6fade3614f367284e2f040470a4e4671e184b2c3944",
+        "Created": "2023-05-16T12:17:52.047781147Z",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "10.10.10.0/24"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "45f5428e34c42f11b437e4000f03138607c372aa697625d5063c4d1dd9bfd661": {
+                "Name": "m1",
+                "EndpointID": "98a8086d5206adaabd08a758e16d167b3e054114f9ca70cfd3d3c3ffc4bfc307",
+                "MacAddress": "02:42:0a:0a:0a:02",
+                "IPv4Address": "10.10.10.2/24",
+                "IPv6Address": ""
+            },
+            "57d5ecd11725a667d37c1ee8e11f89f03480dfaff92d07cb5659a0899d767044": {
+                "Name": "m2",
+                "EndpointID": "2997ab5368ed9bfd737c2e8959e2ab08e04100ce184c4c9ea383b211dc422b8d",
+                "MacAddress": "02:42:0a:0a:0a:03",
+                "IPv4Address": "10.10.10.3/24",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {},
+        "Labels": {}
+    }
+]
+```
+* Lets ping from m1 to m2 using name i.e. service discovery using DNS and then by ip
+    ![Preview](./Images/docker118.png)
+* The network which we created is user defined bridge network
+* Containers can be disconnected from their original network and connected to new network. In the below example i’m connecting d1 from default brige to my_bridge
+    ![Preview](./Images/docker119.png)
+    ![Preview](./Images/docker120.png)
+* disconnect can be used to move the container back to its parent network.
+    ![Preview](./Images/docker121.png)
+
+### Lets look at the following scenario
+
+   ![Preview](./Images/docker122.png)
+* As number of Docker Hosts increase the complexity of running containers becomes difficult to manage.
+* A container in one host (srv1) trying to connect to container in other host (srv3) is not possible with bridge network
+* Failure scenarios:
+    * What happens if the srv1 is down
+    * What happens when a container in srv1 is down
+* Performing the above actions are tedious.
+* Lets just think of networking perspective, docker has a mode called as swarm which enables multi-host docker networking and also it gives orchestration features.
+
+    ![Preview](./Images/docker123.png)
+
+
+### Docker Swarm
+
+![Preview](./Images/docker123.png)
+* Refer the Docker SWARM content discussion
+* Refer to Networking series
