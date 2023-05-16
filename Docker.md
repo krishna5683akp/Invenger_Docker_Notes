@@ -613,3 +613,80 @@ Select * from Persons;
     1. Explicity created (docker volume create myvol)
     2. automatically created as part of container creation
 3. Ensure we have knowledge on necessary folders where the data is stored and use volumes for it
+
+
+
+### Multi Stage Docker build
+* Multi staged build is used to build the code and copy necessary files into the final stage which will be your image
+
+![Preview](./Images/docker79.png)
+
+* [Refer Here](https://docs.docker.com/build/building/multi-stage/) for official docs.
+
+### Scenario – 1: Java Spring petclinic
+* To build this application we need
+    * jdk17
+    * maven
+    * git
+* Manual steps:
+```
+git clone https://github.com/spring-projects/spring-petclinic.git
+cd spring-petclinic 
+mvn package
+# a file gets created in target/spring-petclinic-*.jar
+```
+* To run this application we need jdk 17
+* Refer below Dockerfile to create spring petclinic as multistage build
+```Dockerfile
+FROM alpine/git AS vcs
+RUN cd / && git clone https://github.com/spring-projects/spring-petclinic.git && \
+    pwd && ls /spring-petclinic
+
+FROM maven:3-amazoncorretto-17 AS builder
+COPY --from=vcs /spring-petclinic /spring-petclinic
+RUN ls /spring-petclinic 
+RUN cd /spring-petclinic && mvn package
+
+
+
+FROM amazoncorretto:17-alpine-jdk
+LABEL author="krishna"
+EXPOSE 8080
+ARG HOME_DIR=/spc
+WORKDIR ${HOME_DIR}
+COPY --from=builder /spring-petclinic/target/spring-*.jar ${HOME_DIR}/spring-petclinic.jar
+EXPOSE 8080
+CMD ["java", "-jar", "spring-petclinic.jar"]
+```
+
+### Pushing images to Registries
+
+### Docker Hub
+* Public Registry: Docker Hub [Refer Here](https://hub.docker.com/)
+* Create a public Repository
+* Repository will be in the form of ```<username>/<repo-name>:<tag>```
+![Preview](./Images/docker80.png)
+* After building the image tag the image to new naming format
+```
+docker image tag spc:1.0 madasu/spc:1.0
+```
+
+![Preview](./Images/docker81.png)
+* if this image has to be default also tag with latest (optional)
+* login into docker hub from cli
+```
+docker login
+```
+
+![Preview](./Images/docker82.png)
+
+* Lets push the images
+
+![Preview](./Images/docker83.png)
+![Preview](./Images/docker84.png)
+
+### Private Registries
+* There are many applciations for hosting private registries
+* AWS: ECR (Elastic container registry)
+* Azure: ACR (Azure Container Registry)
+* Jfrog
