@@ -997,3 +997,86 @@ networks:
         - subnet: 192.168.102.0/24
 ```
 * Refer above sample compose file with instructions to run student course register. it is sample python application.
+
+
+### Docker Volumes
+
+* [Refer Here](https://docs.docker.com/storage/volumes/) for official docs
+* Docker volumes purpose is to persist the data even after container is deleted.
+* Docker Volume types
+    * bind mount
+    * Volume
+    * tmpfs
+* I want to preserve what ever is present in tmp directory of alpine container.
+* Bind mount: Mount existing folder from docker host to any folder in container.
+    * Create a folder
+    * mount it to the container
+    * Create some files
+
+![Preview](./Images/docker91.png)
+
+* Delete the container and cross check the files
+* Now create a new container and mount the files to the same path
+
+    ![Preview](./Images/docker92.png)
+* We can also share the same folder from docker host to multiple containers.
+* The same thing can be acheived with –mount ```docker container run -d --mount "type=bind,source=/tmp/cont-temp,target=/tmp" --name bind6 alpine sleep 1d```
+
+![Preview](./Images/docker93.png)
+
+* Volume Mounts: These are storage spaces generally from docker host which is managed by docker. docker has a sub command ```docker volume```
+
+![Preview](./Images/docker94.png)
+![Preview](./Images/docker95.png)
+
+* Lets mount the tools folder in alpine container with my-vol
+
+![Preview](./Images/docker96.png)
+
+* Delete the container
+
+![Preview](./Images/docker97.png)
+
+* To remove the volume execute ```docker volume rm```
+
+![Preview](./Images/docker98.png) 
+
+* mysql ```docker run --name some-mysql -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql``` and list volumes
+
+![Preview](./Images/docker99.png) 
+
+* When we created mysql one volume got created.
+* When we create postgres as well a volume got created automatically
+
+![Preview](./Images/docker100.png)
+
+* This is happening because of VOLUME instruction in Dockerfile.
+![Preview](./Images/docker101.png)
+![Preview](./Images/docker102.png)
+
+* Generally for stateful application containers, its a good idea to create a VOLUME as part of Dockerfile.
+* Experiment:
+    * Create a volume for mysql data and mount that into mysql container
+    ![Preview](./Images/docker103.png)
+    ![Preview](./Images/docker104.png)
+    * insert some data into it
+    ![Preview](./Images/docker105.png)
+* delete the container
+* Create a new mysql container and reuse the same volume and verify if the data is present or not.
+
+    ![Preview](./Images/docker106.png)
+    ![Preview](./Images/docker107.png)
+    ![Preview](./Images/docker108.png)
+* To interact with mysql container [Refer Here](https://dev.mysql.com/doc/mysql-linuxunix-excerpt/8.0/en/docker-mysql-getting-started.html)
+* To create the container we have used ```docker container run --name mysql-primary -d -P --mount "source=mysql-employee-vol,target=/var/lib/mysql" -e "MYSQL_ROOT_PASSWORD=krishna" -e "MYSQL_USER=krishna" -e "MYSQL_PASSWORD=krishna" -e "MYSQL_DATABASE=employee" mysql```
+* To login into mysql prompt ```docker container exec -it mysql-primary mysql -u root -p```
+* To create a table
+```
+use employee;
+CREATE TABLE authors (id INT, name VARCHAR(20), email VARCHAR(20));
+INSERT INTO authors (id,name,email) VALUES(1,"Vivek","xuz@abc.com");
+INSERT INTO authors (id,name,email) VALUES(2,"Priya","p@gmail.com");
+INSERT INTO authors (id,name,email) VALUES(3,"Tom","tom@yahoo.com");
+select * from authors;
+```
+* Tmpfs mount: This gets mounted to the RAM/memory into container. This is useful only for applications which require preset data to be present in memory
